@@ -1,0 +1,59 @@
+version: '3.8'
+
+services:
+  server:
+    container_name: server_web
+    build:
+        context: .
+        dockerfile: Dockerfile
+    ports:
+        - "8080:8080"
+    depends_on:
+        - zipkin
+        - prometheus
+    networks:
+      - observability
+
+  zipkin:
+    container_name: server_zipkin
+    image: openzipkin/zipkin:2.24
+    ports:
+        - "9411:9411"
+    networks:
+        - observability
+
+  prometheus:
+    container_name: server_prometheus
+    image: prom/prometheus
+    volumes:
+        - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+        - prometheus_data:/prometheus
+    command:
+        - --config.file=/etc/prometheus/prometheus.yml
+    ports:
+        - "9090:9090"
+    networks:
+        - observability
+
+  grafana:
+    container_name: server_grafana
+    image: grafana/grafana
+    ports:
+        - "3000:3000"
+        - "9100:9100"
+    environment:
+        - GF_SECURITY_ADMIN_USER=admin
+        - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning
+    networks:
+        - observability
+    depends_on:
+      - prometheus
+
+networks:
+    observability:
+        driver: bridge
+
+volumes:
+    prometheus_data:
