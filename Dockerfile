@@ -1,17 +1,13 @@
 FROM golang:1.19-alpine AS build-stage
 
-LABEL authors="paulolopesestevao"
-
-
 WORKDIR /app
 
-COPY go.mod go.sum ./
+ENV CGO_ENABLED=0
+ENV GOOS=linux
 
-RUN go mod download
+COPY . .
 
-COPY *.go ./
-
-RUN CGO_ENABLED=0 GOOS=linux go build -o /docker-gs-ping
+RUN go build -a -v -ldflags="-w -s" -o /docker-gs-ping
 
 # Run the tests in the container
 FROM build-stage AS run-test-stage

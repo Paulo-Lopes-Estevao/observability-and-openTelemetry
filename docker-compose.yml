@@ -1,4 +1,4 @@
-version: '3.8'
+version: '3.7'
 
 services:
   server:
@@ -6,11 +6,14 @@ services:
     build:
         context: .
         dockerfile: Dockerfile
+    volumes:
+      - ./db.json:/db.json
     ports:
         - "8080:8080"
     depends_on:
         - zipkin
         - prometheus
+        - grafana
     networks:
       - observability
 
@@ -20,24 +23,27 @@ services:
     ports:
         - "9411:9411"
     networks:
-        - observability
+      - observability
 
   prometheus:
-    container_name: server_prometheus
-    image: prom/prometheus
+    container_name: prometheus
+    image: prom/prometheus:v2.40.4
     volumes:
-        - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
-        - prometheus_data:/prometheus
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
     command:
-        - --config.file=/etc/prometheus/prometheus.yml
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
     ports:
         - "9090:9090"
     networks:
-        - observability
+      - observability
 
   grafana:
-    container_name: server_grafana
-    image: grafana/grafana
+    container_name: grafana
+    image: grafana/grafana:9.3.0
     ports:
         - "3000:3000"
         - "9100:9100"
@@ -45,9 +51,10 @@ services:
         - GF_SECURITY_ADMIN_USER=admin
         - GF_SECURITY_ADMIN_PASSWORD=admin
     volumes:
-      - ./grafana/provisioning:/etc/grafana/provisioning
+      - ./grafana/datasource.yml:/etc/grafana/provisioning/datasources/datasource.yml
+      - grafana_data:/var/lib/grafana
     networks:
-        - observability
+      - observability
     depends_on:
       - prometheus
 
@@ -57,3 +64,4 @@ networks:
 
 volumes:
     prometheus_data:
+    grafana_data:
